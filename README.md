@@ -4,7 +4,8 @@
 
 ## Ссылка на GitHub Pages 🎨
 
-[`nikita160.github.io/DOM-AJAX-API-homework`](https://nikita160.github.io/nikita160/DOM-AJAX-API-homework/)
+[Ссылка]( https://nikita160.github.io/DOM-AJAX-API-homework/)
+                                           
 
 ## Демо
 
