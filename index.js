@@ -1,8 +1,9 @@
 const itemsGenerator = document.querySelector('.items-generator');
 const spacer = document.querySelector('.spacer');
+const layout = document.querySelector('.layout');
 
-const BOX_ITEM_WIDTH = 100;
-const BOX_ITEM_HIGTH = BOX_ITEM_WIDTH;
+const gridContainer = document.querySelector('.box-container-grid');
+const fluentContainer = document.querySelector('.box-container-fluent');
 
 let currentItem;
 
@@ -12,9 +13,7 @@ let currentY = 0;
 let shiftX = 0;
 let shiftY = 0;
 
-let elemBelow;
-
-let isOverDropZone = false;
+let isOverContainer = false;
 
 let currentContainer = null;
 
@@ -22,69 +21,89 @@ itemsGenerator.addEventListener('pointerdown', dragStartHandler, { once: true })
 itemsGenerator.style.touchAction = 'none';
 itemsGenerator.ondragstart = () => false;
 
+function addContainersListeners() {
+    gridContainer.addEventListener('pointerenter', overContainerHandler);
+    gridContainer.addEventListener('pointerout', outContainerHandler);
+    fluentContainer.addEventListener('pointerenter', overContainerHandler);
+    fluentContainer.addEventListener('pointerout', outContainerHandler);
+}
+
+function removeContainersListeners() {
+    gridContainer.removeEventListener('pointerenter', overContainerHandler);
+    gridContainer.removeEventListener('pointerout', outContainerHandler);
+    fluentContainer.removeEventListener('pointerenter', overContainerHandler);
+    fluentContainer.removeEventListener('pointerout', outContainerHandler);
+}
+
+function overContainerHandler(event) {
+    isOverContainer = true;
+    currentContainer = event.target;
+    setContainerHighlight(currentContainer);
+}
+
+function outContainerHandler() {
+    isOverContainer = false;
+    currentContainer = null;
+    removeAllContainersHighlight();
+}
+
 function buildNewItem() {
     const box = document.createElement('div');
-    box.style.width = `${BOX_ITEM_WIDTH}px`;
-    box.style.height = `${BOX_ITEM_HIGTH}px`;
     box.classList.add('box-item');
     box.style.backgroundColor = getRandomColor();
     box.ondragstart = () => false;
     box.style.touchAction = 'none';
-    itemsGenerator.appendChild(box);
-
     return box;
 }
 
 function dragStartHandler(event) {
+    itemsGenerator.releasePointerCapture(event.pointerId);
     currentItem = buildNewItem();
+    currentItem.style.left = `${itemsGenerator.getBoundingClientRect().left}px`;
+    currentItem.style.top = `${itemsGenerator.getBoundingClientRect().top}px`;
+    document.body.appendChild(currentItem);
     shiftX = event.clientX - currentItem.getBoundingClientRect().left;
     shiftY = event.clientY - currentItem.getBoundingClientRect().top;
     document.addEventListener('pointermove', draggingHandler);
     document.addEventListener('pointerup', dropHandler, { once: true });
     currentItem.classList.add('box-item-dragging');
+    addContainersListeners();
+
+    itemsGenerator.classList.add('items-generator-disable');
+    layout.classList.add('layout-no-drop');
 }
 
 function draggingHandler(event) {
-    currentItem.style.pointerEvents = 'none';
-    elemBelow = document.elementFromPoint(event.pageX, event.pageY);
     currentX = event.clientX;
     currentY = event.clientY;
     currentItem.style.left = `${currentX - shiftX}px`;
     currentItem.style.top = `${currentY - shiftY}px`;
-    currentItem.style.pointerEvents = 'auto';
-
-    if (isDropZone(elemBelow) !== isOverDropZone) {
-        setCurrentContainer(elemBelow);
-        isOverDropZone = !isOverDropZone;
-        switchContainerHighlight();
-        switchCursor();
-    }
 }
 
 function dropHandler() {
     document.removeEventListener('pointermove', draggingHandler);
     currentItem.classList.remove('box-item-dragging');
     itemsGenerator.addEventListener('pointerdown', dragStartHandler, { once: true });
-    currentItem.style.touchAction = 'auto';
-    if (isOverDropZone) {
-        currentItem.classList.add('box-item-dropped', 'drop-zone');
+    itemsGenerator.classList.remove('items-generator-disable');
+    layout.classList.remove('layout-no-drop');
+    removeAllContainersHighlight();
+    removeContainersListeners();
+
+    if (isOverContainer) {
+        currentItem.classList.remove('box-item-dragging');
         currentContainer.appendChild(currentItem);
+        if (currentContainer.classList.contains('box-container-grid')) {
+            gridContainerDropHandler();
+        }
+        if (currentContainer.classList.contains('box-container-fluent')) {
+            fluentContainerDropHandler();
+        }
     } else {
         currentItem.remove();
-        return;
     }
-
-    if (currentContainer.classList.contains('box-container-grid')) {
-        gridContainerDropHandler();
-    }
-    if (currentContainer.classList.contains('box-container-fluent')) {
-        fluentContainerDropHandler();
-    }
-    switchCursor();
+    isOverContainer = false;
     currentItem = null;
     currentContainer = null;
-    switchContainerHighlight();
-    isOverDropZone = false;
 }
 
 function gridContainerDropHandler() {
@@ -118,32 +137,14 @@ function fluentContainerDropHandler() {
     }
 }
 
-function isDropZone(elemBelow) {
-    if (!elemBelow) {
-        return false;
-    }
-    return elemBelow.classList.contains('drop-zone');
+function setContainerHighlight(element) {
+    element.classList.add('box-container-highlighted');
 }
 
-function setCurrentContainer(elemBelow) {
-    if (isDropZone(elemBelow)) {
-        currentContainer = elemBelow.closest('.box-container');
-    } else {
-        currentContainer = null;
-    }
-}
-
-function switchContainerHighlight() {
+function removeAllContainersHighlight() {
     [...document.querySelectorAll('.box-container')].forEach((element) =>
         element.classList.remove('box-container-highlighted')
     );
-    if (currentContainer) {
-        currentContainer.classList.add('box-container-highlighted');
-    }
-}
-
-function switchCursor() {
-    currentItem.classList.toggle('box-item-avilable-drop');
 }
 
 function getRandomColor() {
